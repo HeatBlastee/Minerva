@@ -30,10 +30,13 @@ export async function POST(req: Request, res: Response) {
       }[];
     }[];
 
+    console.log("Generating chapters for course:", { title, units });
+
     let output_units: outputUnits = await strict_output(
       "You are an AI capable of curating course content, coming up with relevant chapter titles, and finding relevant youtube videos for each chapter",
-      new Array(units.length).fill(
-        `It is your job to create a course about ${title}. The user has requested to create chapters for each of the units. Then, for each chapter, provide a detailed youtube search query that can be used to find an informative educationalvideo for each chapter. Each query should give an educational informative course in youtube.`
+      units.map(
+        (unit) =>
+          `It is your job to create a course about ${title}. The user has requested to create chapters for the unit: "${unit}". You must output both the title of the unit and an array of chapters for that unit. For each chapter, provide a detailed youtube search query that can be used to find an informative educational video for each chapter. Each query should give an educational informative course in youtube.`
       ),
       {
         title: "title of the unit",
@@ -41,6 +44,8 @@ export async function POST(req: Request, res: Response) {
           "an array of chapters, each chapter should have a youtube_search_query and a chapter_title key in the JSON object",
       }
     );
+
+    console.log("Generated output_units:", JSON.stringify(output_units, null, 2));
 
     const imageSearchTerm = await strict_output(
       "you are an AI capable of finding the most relevant image for a course",

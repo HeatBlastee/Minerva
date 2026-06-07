@@ -1,7 +1,8 @@
 import { Configuration, OpenAIApi } from "openai";
 
 const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.GITHUB_TOKEN || process.env.OPENAI_API_KEY,
+  basePath: "https://models.inference.ai.azure.com",
 });
 const openai = new OpenAIApi(configuration);
 
@@ -15,7 +16,7 @@ export async function strict_output(
   output_format: OutputFormat,
   default_category: string = "",
   output_value_only: boolean = false,
-  model: string = "gpt-3.5-turbo",
+  model: string = "gpt-4o-mini",
   temperature: number = 1,
   num_tries: number = 3,
   verbose: boolean = false
@@ -48,13 +49,14 @@ export async function strict_output(
 
     // if input is in a list format, ask it to generate json in a list
     if (list_input) {
-      output_format_prompt += `\nGenerate an array of json, one json for each input element.`;
+      output_format_prompt += `\nIMPORTANT: You MUST generate a JSON array of objects (wrapped in [ ... ]), with one JSON object for each input element. Do NOT return a single JSON object.`;
     }
 
     // Use OpenAI to get a response
     const response = await openai.createChatCompletion({
       temperature: temperature,
       model: model,
+      max_tokens: 4000,
       messages: [
         {
           role: "system",
@@ -65,10 +67,12 @@ export async function strict_output(
     });
 
     let res: string =
-      response.data.choices[0].message?.content?.replace(/'/g, '"') ?? "";
+      response.data.choices[0].message?.content?.trim() ?? "";
 
-    // ensure that we don't replace away apostrophes in text
-    res = res.replace(/(\w)"(\w)/g, "$1'$2");
+    // Clean markdown code blocks if present (e.g. ```json ... ```)
+    if (res.startsWith("```")) {
+      res = res.replace(/^```[a-zA-Z0-9]*\n/, "").replace(/\n```$/, "").trim();
+    }
 
     if (verbose) {
       console.log(
@@ -85,7 +89,7 @@ export async function strict_output(
 
       if (list_input) {
         if (!Array.isArray(output)) {
-          throw new Error("Output format not in an array of json");
+          output = [output];
         }
       } else {
         output = [output];
@@ -135,8 +139,10 @@ export async function strict_output(
       return list_input ? output : output[0];
     } catch (e) {
       error_msg = `\n\nResult: ${res}\n\nError message: ${e}`;
-      console.log("An exception occurred:", e);
-      console.log("Current invalid json format ", res);
+      if (verbose) {
+        console.log("An exception occurred:", e);
+        console.log("Current invalid json format ", res);
+      }
     }
   }
 
