@@ -16,7 +16,7 @@
 
 The platform implements a **Freemium SaaS monetization model** with Stripe subscription billing, where users start with 10 free course generations and can upgrade to a Pro tier for unlimited access.
 
-**Live Demo**: _[Deploy your own using the guide below]_
+**Live Demo**: minerva-ochre.vercel.app
 
 ---
 
